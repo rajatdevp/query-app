@@ -7,7 +7,7 @@ app = Blueprint('app', __name__)
 def manage_users():
     if request.method == 'GET':
         users = QueryService.get_all_users()
-        return jsonify([{'id': users, 'name': users, 'email': users}])
+        return users
 
     if request.method == 'POST':
         #                                                                            data = request.get_json()
