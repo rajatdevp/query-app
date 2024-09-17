@@ -3,9 +3,10 @@ from services import QueryService
 
 app = Blueprint('app', __name__)
 
-@app.route('/api/query', methods=['GET', 'POST'])
-def manage_users():
+@app.route('/api/query/<string:input_query>', methods=['GET', 'POST'])
+def manage_users(input_query):
     if request.method == 'GET':
+        print(input_query)
         users = QueryService.get_all_users()
         return users
     if request.method == 'POST':
@@ -15,7 +16,7 @@ def manage_users():
 
 
 @app.route('/api/query/kafka', methods=['GET', 'POST'])
-def manage_users():
+def manage_users_kafka():
     if request.method == 'GET':
         users = QueryService.get_all_users_kafka()
         return users
