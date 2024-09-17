@@ -8,6 +8,10 @@ class QueryService:
         query = """SELECT communication_code, communication_name, communication_category, template_name FROM public.campaign_metadata limit 5;"""
         return getData(query)
 
+    @staticmethod
+    def get_all_users_kafka():
+        query = """SELECT communication_code, communication_name, communication_category, template_name FROM public.campaign_metadata limit 5;"""
+        return getData(query)
 
 def getData(queryString):
     conn = psycopg2.connect(
