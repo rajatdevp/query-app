@@ -17,7 +17,7 @@ except:
 finally:
     pass
 
-openai.api_key  = ""
+openai.api_key  = "rajat"
 
 class QueryService:
     @staticmethod
