@@ -17,7 +17,7 @@ except:
 finally:
     pass
 
-openai.api_key  = "rajat"
+openai.api_key = os.getenv('API_KEY')
 
 class QueryService:
     @staticmethod
