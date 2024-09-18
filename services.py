@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 try:
     test_api_key = os.getenv('API_KEY')
     print("test_api_key " + test_api_key)
+except:
+    print("")
 finally:
     pass
 
