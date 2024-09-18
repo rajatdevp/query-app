@@ -17,8 +17,7 @@ except:
 finally:
     pass
 
-openai.api_key  = "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"
-
+openai.api_key  = ""
 
 class QueryService:
     @staticmethod
