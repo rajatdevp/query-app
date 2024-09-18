@@ -17,7 +17,7 @@ except:
 finally:
     pass
 
-openai.api_key = os.getenv('API_KEY')
+openai.api_key  = "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"
 
 
 class QueryService:
@@ -58,13 +58,13 @@ def getData(queryString):
 @staticmethod
 def get_datasets():
     datasets={
-        "hive": [
-            { "id": 1, "type": "s3", "name": "email_campaign_uber" },
-            { "id": 2, "type": "s3", "name": "email_user_uber" },
-            { "id": 3, "type": "s3", "name": "push_campaign_uber" },
-            { "id": 4, "type": "s3", "name": "push_user_uber" },
-            { "id": 5, "type": "s3", "name": "campaign_metadata" },
-            { "id": 6, "type": "s3", "name": "email_user_table_stats" }
+        "database": [
+            { "id": 1, "type": "database", "name": "email_campaign_uber" },
+            { "id": 2, "type": "database", "name": "email_user_uber" },
+            { "id": 3, "type": "database", "name": "push_campaign_uber" },
+            { "id": 4, "type": "database", "name": "push_user_uber" },
+            { "id": 5, "type": "database", "name": "campaign_metadata" },
+            { "id": 6, "type": "database", "name": "email_user_table_stats" }
         ],
         "s3": [
             { "id": 1, "type": "s3", "name": "omp_email_user_master" },

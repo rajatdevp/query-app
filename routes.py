@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, Blueprint
+from flask_cors import cross_origin
 
 import services
 from services import QueryService
@@ -6,6 +7,7 @@ from services import QueryService
 app = Blueprint('app', __name__)
 
 @app.route('/api/query/v1', methods=['GET', 'POST'])
+@cross_origin(origin='*')
 def manage_users():
     if request.method == 'GET':
         datasets = services.get_datasets()
