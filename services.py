@@ -3,12 +3,19 @@ import pandas as pd
 import psycopg2
 import openai
 import os
+from flask import jsonify
+import pandas as pd
+import json
+from scipy.stats import pearsonr
+import matplotlib.pyplot as plt
 
 try:
     test_api_key = os.getenv('API_KEY')
-    print(test_api_key)
+    print("test_api_key " + test_api_key)
 finally:
     pass
+
+openai.api_key = os.getenv('API_KEY')
 
 
 class QueryService:
@@ -45,9 +52,29 @@ def getData(queryString):
 
     cur.close()
     conn.close()
-
-
     return df
+@staticmethod
+def get_datasets():
+    datasets={
+        "hive": [
+            { "id": 1, "type": "s3", "name": "email_campaign_uber" },
+            { "id": 2, "type": "s3", "name": "email_user_uber" },
+            { "id": 3, "type": "s3", "name": "push_campaign_uber" },
+            { "id": 4, "type": "s3", "name": "push_user_uber" },
+            { "id": 5, "type": "s3", "name": "campaign_metadata" },
+            { "id": 6, "type": "s3", "name": "email_user_table_stats" }
+        ],
+        "s3": [
+            { "id": 1, "type": "s3", "name": "omp_email_user_master" },
+            { "id": 2, "type": "s3", "name": "omp_audience_engagement_data_campaign_level_domain_event_v2" }
+        ],
+        "kafka": [
+            { "id": 1, "type": "kafka", "name": "teal_segmentation_history_v3" },
+            { "id": 2, "type": "kafka", "name": "customer_profile_enhanced_v4" }
+        ]
+    }
+    return datasets
+
 
 @staticmethod
 def df_to_json(df):
@@ -182,9 +209,23 @@ system_prompt = """ You are a Data Analyst, proficient in python and other langu
   - **brand**: String, Brand to which the communication caters
 
 
-As the 1st part of the response, please provide a valid SQL query to retrieve the required information from the tables in prostgres DB without any errors. Strictly DO NOT use Aliases for columns instead only use appropriate column names in the whole query. Ensure to use having clause when using group by instead of where clause. Additionally, remember to limit the number of records in the query to the most relevant number based on the question. If date conditions are required, use the `current_date()` function to compare dates in the query.
+#### email_user_table_stats
+- **Table description** : Reports metrics at recipient_id and sent_date grain for email channel.
+- **Columns**:
+    - **recipient_id**: String, User identifier, uniquely identifies user within a brand
+    - **brand**: String, Brand to which the comm caters
+    - **sent_date**: Date, Date of communication being sent to user (in UTC)
+    - **email_omni_code**: String, An email omni code having all the details of campaign/brand/subchannel/date/pos/locale/various id's to identify a communication uniquely. 
+    - **medium_influenced_gp**: Double, How much GP i.e. gross profit ,is attributed to a user based on the Influenced model
+    - **medium_influenced_nbv**: Double, How much NBV i.e. net booking value ,is attributed to a user based on the Influenced model
+    - **room_night_count**: Double, Room nights booked (excluding cancellations)
+    - **clicks**: Int, Count of recorded clicks events
+    - **platform_identifier**: String, indicates platform using which campaign are sent. It can have 2 values - UMP and SF.
 
-As the 2nd part of the response, provide Python code to extract the data from the query result and return the JSON string named 'graph_json' to be used in a React-based chart.cjs module. Assume that the query result is available in a Pandas DataFrame named `result_df`. The code should be structured based on the number of columns in the select query. If the DataFrame contains date columns, then please ensure that you first convert these date columns to a string type using appropriate functions. Perform this operation for all date columns in the result_df. Decide on the type of graph based on the question and provide appropriate code to gnereate the json for the specific graph types. If there are multiple data points that can be plotted, ONLY then provide the JSON generation code, if there is only one data point in result data, just return empty json string. The returned JSON string should follow the structure of the example below:
+
+As the 1st part of the response, please provide a valid PostgreSQL query, to retrieve the required information from the tables in prostgres DB without any errors. Strictly DO NOT use Aliases for columns instead only use appropriate column names in the whole query. Ensure to use having clause when using group by instead of where clause. Additionally, remember to limit the number of records in the query to the most relevant number based on the question. If date conditions are required, use the `current_date` function to compare dates in the query.
+
+As the 2nd part of the response, provide Python code to extract the data from the query result and return the JSON string named 'graph_json' to be used in a React-based chart.cjs module. Assume that the query result is available in a Pandas DataFrame named `result_df`. For statistical analysis, use the base data directlty instead of `result_df`. For statitical analysis, clean the data which should include dealing with all nulls to ensure statistical analysis work properly. The code should be structured based on the number of columns in the select query. If the DataFrame contains date columns, then please ensure that you first convert these date columns to a string type using appropriate functions. For cases where statitical analysis is to be done, provide python code for statiscal analysis as well. Perform this operation for all date columns in the result_df. Decide on the type of graph based on the question and provide appropriate code to gnereate the json for the specific graph types. If there are multiple data points that can be plotted, ONLY then provide the JSON generation code, if there is only one data point in result data, just return empty json string. The returned JSON string should follow the structure of the example below:
 
 sampleGraphData = {
   labels: ['January', 'February', 'March'], // Graph labels
@@ -243,8 +284,8 @@ Expect the below Data points as part of the user prompt:
 "Question": "<Question in Natural Language>"
 "Original Query": "<Original query if this is a follow-up question>"
 "Dataset" : "<Datasets to be considered>"
-"""
 
+"""
 @staticmethod
 def get_llm_response(question, follow_up_flag, original_query, dataset):
     user_prompt = f"Question: {question}\nFollow-up: {follow_up_flag}\nOriginal Query: {original_query}\nDataset: {dataset}"
@@ -267,3 +308,30 @@ def extract_code_blocks(text):
         code_blocks.append(text[start + 3:end].strip())
         start = end + 3
     return code_blocks
+
+@staticmethod
+def process_request(data):
+    # Access elements from the JSON data
+    question = data.get('question')
+    original_query = data.get('original_query')
+    dataset = data.get('dataset')
+    if original_query:
+        follow_up_flag = 'Y'
+    else:
+        follow_up_flag = 'N'
+    # Assuming you have a method to create a new user
+    response_text = get_llm_response(question, follow_up_flag, original_query, dataset)
+    blocks = extract_code_blocks(response_text)
+    result_df = getData(blocks[0])
+    result_json = df_to_json(result_df)
+    print("result_json 1: " + result_json)
+    scope={'result_df': result_df}
+    #graph_json = None
+    exec(blocks[1], scope)
+    print("block 1: " + blocks[1])
+    print("graph_json"+scope['graph_json'])
+    #answer_text = None
+    exec(blocks[2], scope)
+    print("block 2: " + blocks[2])
+    print("answer_text"+scope['answer_text'])
+    return jsonify({'query': blocks[0],'table_data': result_json, 'graph_json': scope['graph_json'], 'answer_text': scope['answer_text']}), 201
